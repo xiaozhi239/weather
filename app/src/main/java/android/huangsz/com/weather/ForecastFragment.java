@@ -1,8 +1,10 @@
 package android.huangsz.com.weather;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.text.format.Time;
@@ -84,10 +86,17 @@ public class ForecastFragment extends Fragment {
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.action_refresh) {
-            new ForecastTask().execute("94043");
+            updateWeather();
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void updateWeather() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+        String location = prefs.getString(getString(R.string.pref_location_key),
+                getString(R.string.pref_location_default));
+        new ForecastTask().execute(location);
     }
 
     /* The date/time conversion code is going to be moved outside the asynctask later,
@@ -104,12 +113,26 @@ public class ForecastFragment extends Fragment {
      * Prepare the weather high/lows for presentation.
      */
     private String formatHighLows(double high, double low) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+        String unit = prefs.getString(getString(R.string.pref_units_key),
+                getString(R.string.pref_units_default));
+        if (unit.equals(getString(R.string.pref_units_imperial))) {
+            high = high * 1.8 + 32;
+            low = low * 1.8 + 32;
+        }
+
         // For presentation, assume the user doesn't care about tenths of a degree.
         long roundedHigh = Math.round(high);
         long roundedLow = Math.round(low);
 
         String highLowStr = roundedHigh + "/" + roundedLow;
         return highLowStr;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        updateWeather();
     }
 
     /**
